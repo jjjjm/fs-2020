@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import personService from './services/persons'
 
-const Notification = ({message}) => {
+const Notification = ({ message }) => {
   const notificationStyle = {
-      color: 'green',
-      background: 'lightgrey',
-      fontSize: '20px',
-      borderStyle: 'solid',
-      borderRadius: '5px',
-      padding: '10px',
-      marginBottom: '10px',
+    color: 'green',
+    background: 'lightgrey',
+    fontSize: '20px',
+    borderStyle: 'solid',
+    borderRadius: '5px',
+    padding: '10px',
+    marginBottom: '10px',
   }
   return (
     <div style={notificationStyle}>{message}</div>
   )
 }
 
-const Error = ({message}) => {
+const Error = ({ message }) => {
   const errorStyle = {
     color: 'red',
     background: 'lightgrey',
@@ -25,10 +25,10 @@ const Error = ({message}) => {
     borderRadius: '5px',
     padding: '10px',
     marginBottom: '10px',
-}
-return (
-  <div style={errorStyle}>{message}</div>
-)
+  }
+  return (
+    <div style={errorStyle}>{message}</div>
+  )
 }
 
 const Person = ({ person, deleteFunction }) => {
@@ -85,21 +85,26 @@ const App = () => {
       number: newNumber
     }
     const duplicate = persons.find(person => person.name === newPerson.name)
-    if (duplicate && window.confirm(`${newName} is already added to phonebook, replace old number with new one?`)) {
-      personService
-      .update(duplicate.id ,{...duplicate, number:newNumber})
-      .then(response => 
-        setPersons(persons.map(person => person.id !== duplicate.id ? person : response.data)))
-      .then(response => addNotification(<Notification message={`Information for ${newName} updated`} />))
-      .catch(response => addNotification(<Error message={`${newName} already deleted`} />))
-    } else {
+    if (!duplicate) {
       personService
         .post(newPerson)
         .then(response => setPersons(persons.concat(response.data)))
-        .then(response => addNotification(<Notification message={`${newName} added`} />))
+        .then(response => {
+          addNotification(<Notification message={`${newName} added`} />)
+          setNewName('')
+          setNewNumber('')
+        })
+        .catch(error => addNotification(<Error message={error.response.data.error} />))
+    } else if (window.confirm(`${newName} is already added to phonebook, replace old number with new one?`)) {
+      personService
+        .update(duplicate.id, { ...duplicate, number: newNumber })
+        .then(response =>
+          setPersons(persons.map(person => person.id !== duplicate.id ? person : response.data)))
+        .then(response => addNotification(<Notification message={`Information for ${newName} updated`} />))
+        .catch(response => addNotification(<Error message={`${newName} already deleted`} />))
+      setNewName('')
+      setNewNumber('')
     }
-    setNewName('')
-    setNewNumber('')
   }
 
   const deletePerson = (person) => {
@@ -108,7 +113,10 @@ const App = () => {
         .remove(person.id)
         .then(response => setPersons(persons.filter(curr => curr.id !== person.id)))
         .then(response => addNotification(<Notification message={`${person.name} removed`} />))
-        .catch(error => addNotification(<Error message={`Information for ${person.name} has already been deleted from the server`} />))
+        .catch(error => {
+          addNotification(<Error message={`Information for ${person.name} has already been deleted from the server`} />)
+          console.log(error)
+        })
     }
   }
 
